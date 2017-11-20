@@ -192,8 +192,10 @@ EventEmitter.prototype.removeListener = function(type, listener) {
   position = -1;
 
   //原来有问题的地方
+  //在调用bind的时候引用有问题， 不是全等
   //list === listener or this._events[type]
-  if (list === listener || (isFunction(list.listener) && list.listener === listener)) {
+  //调整为传入的类型，在事件对象中有维护即可删除事件监听
+  if (isFunction(list) || isObject(list) || (isFunction(list.listener) && list.listener === listener)) {
     delete this._events[type];
     if (this._events.removeListener)
       this.emit('removeListener', type, listener);

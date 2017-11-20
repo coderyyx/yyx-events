@@ -1,6 +1,6 @@
 {
   "name": "yyx-event",
-  "version": "0.1.3",
+  "version": "1.0.0",
   "description": "events",
   "main": "index.js",
   "scripts": {
