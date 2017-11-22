@@ -1,6 +1,10 @@
 # yyx-event
 在使用Flux库的时候遇到其中融合的events库出现问题，导致监听的事件删除不掉，监听事件存在重复调用的情况下，自行基于events开发事件库
 替换flux框架中的相关事件库
+___________________________________________
+
+In the use of Flux library encountered in the fusion of the events library problems, leading to the incident can not be deleted eavesdropping, there are two occasions to monitor the event call, based on the event development event library
+Replaces the related event library in the flux framework
 
 [![travis][travis-image]][travis-url]
 [![dep][dep-image]][dep-url]
@@ -29,14 +33,26 @@ var EventEmitter = require('yyx-event');
 var event = new EventEmitter();
 
 
+//监听事件回调
+//Monitor event callbacks
 let listenFun = function(){};
-监听 
+
+
+//监听
+//listenging 
 event.addListener('listen',listenFun);
 
-卸载事件监听
+//触发监听事件
+//trigger listening event
+event.emit('listen');
+
+
+//卸载事件监听
+//remove listening event
 event.removeListener('listen',listenFun);
 
-设置最大监听事件数量
+//设置最大监听事件数量
+//set the maximum number of listening events
 event.setMaxListeners(maxNumbers);
 
 ```

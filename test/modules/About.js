@@ -1,5 +1,5 @@
 import React from 'react';
-var Events =require('../../index.js');
+var Events =require('../../src/index.js');
 var event = new Events();
 
 export default React.createClass({
