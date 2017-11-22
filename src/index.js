@@ -24,9 +24,6 @@ EventEmitter.prototype._maxListeners = undefined;
 EventEmitter.defaultMaxListeners = 10;
 
 
-// Obviously not all Emitters should be limited to 10. This function allows
-// that to be increased. Set to zero for unlimited.
-
 // 可设置监听事件上限
 
 EventEmitter.prototype.setMaxListeners = function(n) {
@@ -62,7 +59,7 @@ EventEmitter.prototype.emit = function(type) {
   }
 
   //
-  handler = this._events.get(type);//[type];
+  handler = this._events.get(type);
 
   if (isUndefined(handler))
     return false;
@@ -197,15 +194,14 @@ EventEmitter.prototype.removeListener = function(type, listener) {
   //在调用bind的时候引用有问题， 不是全等
   //list === listener or this._events[type]
   //调整为传入的类型，在事件对象中有维护即可删除事件监听
-  if (isFunction(list) || isObject(list) || (isFunction(list.listener) && list.listener === listener)) {
+  if(isFunction(list)  || (isFunction(list.listener) && list.listener === listener)) {
     this._events.delete(type);
     if (this._events.has('removeListener'))
       this.emit('removeListener', type, listener);
 
-  } else if (isObject(list)) {
+  }else if(isObject(list)) {
     for (i = length; i-- > 0;) {
-      if (list[i] === listener ||
-          (list[i].listener && list[i].listener === listener)) {
+      if (list[i] === listener || (list[i].listener && list[i].listener === listener)) {
         position = i;
         break;
       }
@@ -259,7 +255,11 @@ EventEmitter.prototype.removeAllListeners = function(type) {
   if (isFunction(listeners)) {
     this.removeListener(type, listeners);
   } else if (listeners) {
-    // LIFO order
+    //后进先出
+    /*
+    *同类型的监听函数 后监听先移除
+    *
+    */
     while (listeners.length)
       this.removeListener(type, listeners[listeners.length - 1]);
   }
@@ -268,6 +268,7 @@ EventEmitter.prototype.removeAllListeners = function(type) {
   return this;
 };
 
+//返回监听函数
 EventEmitter.prototype.listeners = function(type) {
   var ret;
   if (!this._events || !this._events.has(type))
