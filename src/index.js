@@ -1,7 +1,8 @@
 import {isFunction,isNumber,isObject,isUndefined} from './checkTypes/check.js';
 
 function EventEmitter() {
-  this._events = this._events || {};
+  this._events = this._events || new Map();
+
   this._maxListeners = this._maxListeners || undefined;
 }
 
@@ -13,11 +14,13 @@ EventEmitter.EventEmitter = EventEmitter;
 
 
 EventEmitter.prototype._events = undefined;
+
 EventEmitter.prototype._maxListeners = undefined;
 
 
 // By default EventEmitters will print a warning if more than 10 listeners are
 // added to it. This is a useful default which helps finding memory leaks.
+
 EventEmitter.defaultMaxListeners = 10;
 
 
@@ -44,8 +47,8 @@ EventEmitter.prototype.emit = function(type) {
 
   //对于error 类型的事件抛异常
   if (type === 'error') {
-    if (!this._events.error ||
-        (isObject(this._events.error) && !this._events.error.length)) {
+    if (!this._events.has('error') ||
+        (isObject(this._events.get('error')) && !this._events.get('error').length)) {
       er = arguments[1];
       if (er instanceof Error) {
         throw er; // Unhandled 'error' event
@@ -59,7 +62,7 @@ EventEmitter.prototype.emit = function(type) {
   }
 
   //
-  handler = this._events[type];
+  handler = this._events.get(type);//[type];
 
   if (isUndefined(handler))
     return false;
@@ -104,11 +107,11 @@ EventEmitter.prototype.addListener = function(type, listener) {
     throw TypeError('listener must be a function');
 
   if (!this._events)
-    this._events = {};
+    this._events = new Map();
 
   // To avoid recursion in the case that type === "newListener"! Before
   // adding it to the listeners, first emit "newListener".
-  if (this._events.newListener)
+  if (this._events.has('newListener'))
     this.emit('newListener', type,
               isFunction(listener.listener) ?
               listener.listener : listener);
@@ -119,16 +122,15 @@ EventEmitter.prototype.addListener = function(type, listener) {
   3、新增同类型第二个事件监听函数 
   *
   */
-  if (!this._events[type])
-    this._events[type] = listener;//维护内部的Object
-  else if (isObject(this._events[type]))
-    this._events[type].push(listener);
+  if (!this._events.has(type))
+    this._events.set(type,listener);//维护内部的Object
+  else if (isObject(this._events.get(type)))
+    this._events.get(type).push(listener);
   else
     // 新增同类型第二个事件监听函数 使这一类监听函数成为监听数组
-    this._events[type] = [this._events[type], listener];
-
+    this._events.set(type,[this._events.get(type), listener]);
   // Check for listener leak
-  if (isObject(this._events[type]) && !this._events[type].warned) {
+  if (isObject(this._events.get(type)) && !this._events.get(type).warned) {
     if (!isUndefined(this._maxListeners)) {
       m = this._maxListeners;
     } else {
@@ -136,12 +138,12 @@ EventEmitter.prototype.addListener = function(type, listener) {
     }
 
     //事件监听函数超过最大值 警告 可通过提升最大值解决
-    if (m && m > 0 && this._events[type].length > m) {
-      this._events[type].warned = true;
+    if (m && m > 0 && this._events.get(type).length > m) {
+      this._events.get(type).warned = true;
       console.error('(node) warning: possible EventEmitter memory ' +
                     'leak detected. %d listeners added. ' +
                     'Use emitter.setMaxListeners() to increase limit.',
-                    this._events[type].length);
+                    this._events.get(type).length);
       
     }
   }
@@ -184,10 +186,10 @@ EventEmitter.prototype.removeListener = function(type, listener) {
   if (!isFunction(listener))
     throw TypeError('listener must be a function');
 
-  if (!this._events || !this._events[type])
+  if (!this._events || !this._events.has(type))
     return this;
 
-  list = this._events[type];
+  list = this._events.get(type);
   length = list.length;
   position = -1;
 
@@ -196,8 +198,8 @@ EventEmitter.prototype.removeListener = function(type, listener) {
   //list === listener or this._events[type]
   //调整为传入的类型，在事件对象中有维护即可删除事件监听
   if (isFunction(list) || isObject(list) || (isFunction(list.listener) && list.listener === listener)) {
-    delete this._events[type];
-    if (this._events.removeListener)
+    this._events.delete(type);
+    if (this._events.has('removeListener'))
       this.emit('removeListener', type, listener);
 
   } else if (isObject(list)) {
@@ -214,12 +216,12 @@ EventEmitter.prototype.removeListener = function(type, listener) {
 
     if (list.length === 1) {
       list.length = 0;
-      delete this._events[type];
+      this._events.delete(type);
     } else {
       list.splice(position, 1);
     }
 
-    if (this._events.removeListener)
+    if (this._events.has('removeListener'))
       this.emit('removeListener', type, listener);
   }
 
@@ -233,26 +235,26 @@ EventEmitter.prototype.removeAllListeners = function(type) {
     return this;
 
   // not listening for removeListener, no need to emit
-  if (!this._events.removeListener) {
+  if (!this._events.has('removeListener')) {
     if (arguments.length === 0)
-      this._events = {};
-    else if (this._events[type])
-      delete this._events[type];
+      this._events = new Map();
+    else if (this._events.has(type))
+      this._events.delete(type);
     return this;
   }
 
   // emit removeListener for all listeners on all events
   if (arguments.length === 0) {
-    for (key in this._events) {
+    for (let [key, value] of this._events.entries()) {
       if (key === 'removeListener') continue;
       this.removeAllListeners(key);
     }
     this.removeAllListeners('removeListener');
-    this._events = {};
+    this._events = new Map();
     return this;
   }
 
-  listeners = this._events[type];
+  listeners = this._events.get(type);
 
   if (isFunction(listeners)) {
     this.removeListener(type, listeners);
@@ -261,25 +263,25 @@ EventEmitter.prototype.removeAllListeners = function(type) {
     while (listeners.length)
       this.removeListener(type, listeners[listeners.length - 1]);
   }
-  delete this._events[type];
+  this._events.delete(type);
 
   return this;
 };
 
 EventEmitter.prototype.listeners = function(type) {
   var ret;
-  if (!this._events || !this._events[type])
+  if (!this._events || !this._events.has(type))
     ret = [];
-  else if (isFunction(this._events[type]))
-    ret = [this._events[type]];
+  else if (isFunction(this._events.get(type)))
+    ret = [this._events.get(type)];
   else
-    ret = this._events[type].slice();
+    ret = this._events.get(type).slice();
   return ret;
 };
 
 EventEmitter.prototype.listenerCount = function(type) {
   if (this._events) {
-    var evlistener = this._events[type];
+    var evlistener = this._events.get(type);
 
     if (isFunction(evlistener))
       return 1;
